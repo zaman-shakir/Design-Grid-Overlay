@@ -32,6 +32,17 @@
             <div id="gridsettings">
                 <div id="panel1" role="tabpanel" aria-hidden="false" aria-labelledby="tab1" class="tab">
                     <form id="gridForm" name="gridForm">
+                        <fieldset class="gridsettings__presets">
+                            <legend>Quick Presets</legend>
+                            <select id="gridPresets" style="width: 100%; padding: 5px; margin-bottom: 10px;">
+                                <option value="">-- Select a Preset --</option>
+                                <option value="bootstrap">Bootstrap (12 cols, 30px gutters)</option>
+                                <option value="material">Material Design (12 cols, 16px gutters)</option>
+                                <option value="foundation">Foundation (12 cols, 20px gutters)</option>
+                                <option value="tailwind">Tailwind CSS (12 cols, 16px gutters)</option>
+                                <option value="960gs">960 Grid System (12 cols, 20px gutters)</option>
+                            </select>
+                        </fieldset>
                         <fieldset class="gridsettings__columns">
                             <legend>Columns</legend>
                             <div>
@@ -155,12 +166,23 @@
                         <fieldset>
                             <legend>Grid</legend>
                             <div>
+                                <label  info="Adjust the transparency of the grid overlay (0-100%)"
+                                        class="tooltip" for="gridOpacity">Grid Opacity</label>
+                                <input type="range" id="gridOpacity" min="0" max="100" value="20" style="width: 100%;">
+                                <span id="gridOpacityValue" style="font-size: 12px; color: #666;">20%</span>
+                                <br><br>
                                 <label  info="Color of grid columns. Examples: #ff0000, rgb(0, 0, 255), rgba(0, 255, 0, 0.3), hsl(120, 100%, 75%)"
                                         class="tooltip" for="color">Column Color</label>
-                                <input type="text" id="color" value="rgba(155, 0, 65, 0.2)">
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                                    <input type="color" id="colorPicker" value="#9b0041" style="width: 50px; height: 35px; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="color" value="rgba(155, 0, 65, 0.2)" style="flex: 1;">
+                                </div>
                                 <label  info="Color of horizontal lines. Examples: #ff0000, rgb(0, 0, 255), rgba(0, 255, 0, 0.3), hsl(120, 100%, 75%)"
                                         class="tooltip" for="horizontalLinesColor">Horizontal Lines Color</label>
-                                <input type="text" id="horizontalLinesColor" value="rgba(155, 0, 65, 0.2)">
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                                    <input type="color" id="horizontalLinesColorPicker" value="#9b0041" style="width: 50px; height: 35px; border: 2px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="horizontalLinesColor" value="rgba(155, 0, 65, 0.2)" style="flex: 1;">
+                                </div>
                             </div>
                         </fieldset>
                         <fieldset>
@@ -173,15 +195,20 @@
                                     class="tooltip">
                                     Label Color
                                 </label>
-                                <input type="text" id="overlayLabelColor" value="#ff0009">
-                                <br>
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                                    <input type="color" id="overlayLabelColorPicker" value="#ff0009" style="width: 50px; height: 35px; border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="overlayLabelColor" value="#ff0009" style="flex: 1;">
+                                </div>
                                 <label
                                     info="Text color for content width labels. Examples: #ff0000, rgb(0, 0, 255), rgba(0, 255, 0, 0.3), hsl(120, 100%, 75%)"
                                     for="overlayTextColor"
                                     class="tooltip">
                                     Text Color
                                 </label>
-                                <input type="text" id="overlayTextColor" value="#ffffff">
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                                    <input type="color" id="overlayTextColorPicker" value="#ffffff" style="width: 50px; height: 35px; border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="overlayTextColor" value="#ffffff" style="flex: 1;">
+                                </div>
                             </div>
                             <div>
                                 <input type="checkbox" id="hideHiddenElementOverlays">

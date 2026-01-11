@@ -75,7 +75,8 @@ var settingStorageController = (function () {
                     overlayLabelColor: EMPTY_VALUE,
                     overlayTextColor: EMPTY_VALUE,
                     hideHiddenElementOverlays: EMPTY_VALUE,
-                    viewports: EMPTY_VALUE
+                    viewports: EMPTY_VALUE,
+                    gridOpacity: EMPTY_VALUE
                 }
             }
         }
@@ -178,7 +179,7 @@ var settingStorageController = (function () {
                 // don't exist in the stored data
                 for (var settingId in formData.settings) {
 
-                    if (htmlInputs[settingId].type == "number" || htmlInputs[settingId].type == "text") {
+                    if (htmlInputs[settingId].type == "number" || htmlInputs[settingId].type == "text" || htmlInputs[settingId].type == "range") {
                         if (storedFormData && storedFormData[settingId]) {
                             if (storedFormData[settingId].length > 0) {
                                 htmlInputs[settingId].value = storedFormData[settingId];
@@ -245,7 +246,7 @@ var settingStorageController = (function () {
 
             // Pull all HTML UI state into settings fields for storage, as well as into in-memory settings object
             for (var settingId in inMemoryFormData.settings) {
-                if (htmlInputs[settingId].type == "number" || htmlInputs[settingId].type == "text") {
+                if (htmlInputs[settingId].type == "number" || htmlInputs[settingId].type == "text" || htmlInputs[settingId].type == "range") {
                     storedFormData.settings[settingId] = htmlInputs[settingId].value;
                 }
                 else if (htmlInputs[settingId].type == "checkbox") {

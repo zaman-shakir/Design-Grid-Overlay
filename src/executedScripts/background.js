@@ -62,8 +62,8 @@ chrome.runtime.onInstalled.addListener(function () {
  * while user hover on the extension icon
  */
 
-chrome.browserAction.setTitle({
-    title:'Use ( Ctrl / Command + Shift + A ) to activate Design Grid Overlay' 
+chrome.action.setTitle({
+    title:'Use ( Ctrl / Command + Shift + A ) to activate Design Grid Overlay'
 });
 
 
@@ -95,7 +95,9 @@ chrome.commands.onCommand.addListener(function (command) {
       } else {
           if (tabs[i]) {
               var currentId = tabs[i].id;
-              chrome.tabs.sendMessage(currentId, {method: method, tabId: currentId});
+              chrome.tabs.sendMessage(currentId, {method: method, tabId: currentId}).catch(function(error) {
+                  console.log('[Background] sendMessage error:', error.message);
+              });
           }
       }
     }

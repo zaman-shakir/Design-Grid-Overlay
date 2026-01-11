@@ -1,30 +1,37 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Design Grid Overlay",
   "short_name": "Design Grid",
-  "description": "This extension displays grid and measurement overlays for a design grid system.  It is configurable to fit many design scenarios",
-  "version": "1.0.1",
+  "description": "Modern Manifest V3 grid overlay extension with opacity controls, presets, and color pickers. Fork of the original eBay Design Grid Overlay.",
+  "version": "1.1.0",
+  "author": "Shakir Zaman (Enhanced fork of eBay's original)",
+  "homepage_url": "https://github.com/zaman-shakir/Design-Grid-Overlay",
   "icons": { "16": "icons/Logo16.png",
            "48": "icons/Logo48.png",
           "128": "icons/Logo128.png" },
-  "browser_action": {
+  "action": {
     "default_popup": "src/popup.html"
   },
   "background": {
-    "scripts": ["src/executedScripts/background.js"],
-    "persistent": false
+    "service_worker": "src/executedScripts/background.js"
   },
-  "web_accessible_resources": [
+  "web_accessible_resources": [{
+    "resources": [
       "src/css/grid.css",
       "src/css/report.css"
-  ],
+    ],
+    "matches": ["<all_urls>"]
+  }],
   "permissions": [
     "tabs",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
     "http://*/*",
     "https://*/*",
-    "file://*/*",
-    "storage",
-    "activeTab"
+    "file://*/*"
   ],
   "commands": {
     "toggle-columns": {
@@ -34,7 +41,7 @@
       },
       "description": "Toggle columns"
     },
-    "_execute_browser_action": {
+    "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+Shift+A",
         "mac": "Command+Shift+A"

@@ -35,6 +35,43 @@ var gridController = (function () {
     };
 
     /**
+     * Apply opacity to a color string
+     * @param {string} color - The color value (can be rgb, rgba, hex, etc.)
+     * @param {number} opacity - Opacity value from 0-100
+     * @returns {string} - Modified color with opacity applied
+     */
+    var applyOpacityToColor = function(color, opacity) {
+        console.log('[Grid Controller] applyOpacityToColor called with:', {color: color, opacity: opacity});
+
+        if (!color || opacity === undefined) {
+            console.log('[Grid Controller] Color or opacity undefined, returning original color:', color);
+            return color;
+        }
+
+        var opacityDecimal = opacity / 100;
+        console.log('[Grid Controller] Opacity decimal:', opacityDecimal);
+
+        // Handle rgba format
+        if (color.indexOf('rgba') === 0) {
+            var newColor = color.replace(/[\d\.]+\)$/g, opacityDecimal + ')');
+            console.log('[Grid Controller] RGBA format detected, converted:', color, '→', newColor);
+            return newColor;
+        }
+
+        // Handle rgb format - convert to rgba
+        if (color.indexOf('rgb') === 0) {
+            var newColor = color.replace('rgb', 'rgba').replace(')', ', ' + opacityDecimal + ')');
+            console.log('[Grid Controller] RGB format detected, converted:', color, '→', newColor);
+            return newColor;
+        }
+
+        // For other formats (hex, hsl, etc.), return as-is
+        // Users can manually set rgba format if they want opacity control
+        console.log('[Grid Controller] Other format (hex/hsl), returning as-is:', color);
+        return color;
+    };
+
+    /**
      * Creates the CSS that styles the grid columns
      * on a large screen
      *
@@ -42,6 +79,9 @@ var gridController = (function () {
      * @param {object} advancedOptions - Additional settings from the advanced tab of the popup UI
      */
     var createGridContainer = function (options, advancedOptions) {
+        var columnColor = applyOpacityToColor(advancedOptions.color, advancedOptions.gridOpacity);
+        var horizontalColor = applyOpacityToColor(advancedOptions.horizontalLinesColor, advancedOptions.gridOpacity);
+
         return ".grid-overlay-container {"
             + "max-width:" + options.largeWidth + "px;"
             + "padding:0px " + options.outterGutters + "px;"
@@ -50,7 +90,7 @@ var gridController = (function () {
             + ".grid-overlay-col {"
             + "width:" + calcColumnPercents(options.largeColumns) + "%;"
             + "margin: 0 " + (options.gutters / 2) + "px;"
-            + "background: " + advancedOptions.color + ";"
+            + "background: " + columnColor + ";"
             + "}"
             + ".grid-overlay-col:first-child {"
             + "margin-left:0px;"
@@ -59,7 +99,7 @@ var gridController = (function () {
             + "margin-right:0px;"
             + "}"
             + ".grid-overlay-horizontal {"
-            + "background-image: linear-gradient(to top, " + advancedOptions.horizontalLinesColor + " 1px, transparent 1px);"
+            + "background-image: linear-gradient(to top, " + horizontalColor + " 1px, transparent 1px);"
             + "background-size: 100% " + options.rowGutters + "px;"
             + "background-repeat-y: repeat;"
             + "background-position-y: " + options.offsetY + "px;"
@@ -75,12 +115,13 @@ var gridController = (function () {
      * @param {object} advancedOptions - Additional settings from the advanced tab of the popup UI
      */
     var createSmallContainer = function (options, advancedOptions) {
+        var columnColor = applyOpacityToColor(advancedOptions.color, advancedOptions.gridOpacity);
 
         return "@media (max-width:" + options.smallWidth + "px) {"
             + ".grid-overlay-col {"
             + "width:" + calcColumnPercents(options.smallColumns) + "%;"
             + "margin: 0 " + (options.mobileInnerGutters / 2) + "px;"
-            + "background: " + advancedOptions.color + ";"
+            + "background: " + columnColor + ";"
             + "}"
             + ".grid-overlay-container {"
             + "padding:0px " + options.mobileOutterGutters + "px;"
@@ -123,6 +164,8 @@ var gridController = (function () {
         chrome.tabs.sendMessage(currentTabId, {
             method: "addCSS",
             css: createGridLinesCSS(unitWidth) + createGridContainer(options, advancedOptions) + createSmallContainer(options, advancedOptions)
+        }).catch(function(error) {
+            console.log('[Grid Controller] addCSS message error (expected if page just loaded):', error.message);
         });
 
     };
@@ -149,16 +192,22 @@ var gridController = (function () {
      */
     var createGrid = function (currentTabId) {
         respond(1);
-        chrome.tabs.sendMessage(currentTabId, {method: "create", tabId: currentTabId});
+        chrome.tabs.sendMessage(currentTabId, {method: "create", tabId: currentTabId}).catch(function(error) {
+            console.log('[Grid Controller] create message error:', error.message);
+        });
     };
 
     var enableHorizontalLines = function (currentTabId) {
         respondHorizontalLines(1);
-        chrome.tabs.sendMessage(currentTabId, {method: "enableHorizontalLines", tabId: currentTabId});
+        chrome.tabs.sendMessage(currentTabId, {method: "enableHorizontalLines", tabId: currentTabId}).catch(function(error) {
+            console.log('[Grid Controller] enableHorizontalLines message error:', error.message);
+        });
     };
     var disableHorizontalLines = function (currentTabId) {
         respondHorizontalLines(0);
-        chrome.tabs.sendMessage(currentTabId, {method: "disableHorizontalLines", tabId: currentTabId});
+        chrome.tabs.sendMessage(currentTabId, {method: "disableHorizontalLines", tabId: currentTabId}).catch(function(error) {
+            console.log('[Grid Controller] disableHorizontalLines message error:', error.message);
+        });
     };
 
     /**
@@ -213,7 +262,9 @@ var gridController = (function () {
     var removeGrid = function (currentTabId) {
         respond(0);
 
-        chrome.tabs.sendMessage(currentTabId, {method: "destroy", tabId: currentTabId});
+        chrome.tabs.sendMessage(currentTabId, {method: "destroy", tabId: currentTabId}).catch(function(error) {
+            console.log('[Grid Controller] destroy message error:', error.message);
+        });
     };
 
 

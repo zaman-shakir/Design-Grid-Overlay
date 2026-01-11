@@ -187,7 +187,7 @@
         css.id = "base-grid-styles";
         css.rel = "stylesheet";
         css.type = "text/css";
-        css.href = chrome.extension.getURL('src/css/grid.css');
+        css.href = chrome.runtime.getURL('src/css/grid.css');
 
         if (!document.getElementById('base-grid-styles')) {
             document.head.appendChild(css);

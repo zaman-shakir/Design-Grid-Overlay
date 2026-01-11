@@ -34,7 +34,7 @@ var chrome = chrome || {};
             css.id = "base-report-styles";
             css.rel = "stylesheet";
             css.type = "text/css";
-            css.href = chrome.extension.getURL('src/css/report.css');
+            css.href = chrome.runtime.getURL('src/css/report.css');
             document.head.appendChild(css);
         }
     }

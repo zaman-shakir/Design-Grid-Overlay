@@ -73,7 +73,9 @@ var reportController = (function () {
      * @param {object} gridSettings - Grid options object, needed for report calculation
      */
     var calculateReport = function (tabId, gridSettings, advancedOptions) {
-        chrome.tabs.sendMessage(tabId, {method: "fireCalc", tabId: tabId, smallWidth: gridSettings.smallWidth, ignoreScrollbar: advancedOptions.viewports});
+        chrome.tabs.sendMessage(tabId, {method: "fireCalc", tabId: tabId, smallWidth: gridSettings.smallWidth, ignoreScrollbar: advancedOptions.viewports}).catch(function(error) {
+            console.log('[Report Controller] fireCalc message error:', error.message);
+        });
     };
 
     function numberFormat(val, decimalPlaces) {
@@ -88,7 +90,9 @@ var reportController = (function () {
      * @param currentTabId - currently active tab
      */
     var insertReportCSS = function (currentTabId) {
-        chrome.tabs.sendMessage(currentTabId, {method: "addReportCSS"});
+        chrome.tabs.sendMessage(currentTabId, {method: "addReportCSS"}).catch(function(error) {
+            console.log('[Report Controller] addReportCSS message error:', error.message);
+        });
 
     };
 
@@ -114,6 +118,8 @@ var reportController = (function () {
             hideHiddenElementOverlays: hideHiddenElementOverlays,
             overlayLabelColor: overlayLabelColor,
             overlayTextColor: overlayTextColor
+        }).catch(function(error) {
+            console.log('[Report Controller] createReportOverlay message error:', error.message);
         });
 
     };
@@ -125,7 +131,9 @@ var reportController = (function () {
      */
     var removeReportOverlay = function (currentTabId) {
 
-        chrome.tabs.sendMessage(currentTabId, {method: "removeReportOverlay", tabId: currentTabId});
+        chrome.tabs.sendMessage(currentTabId, {method: "removeReportOverlay", tabId: currentTabId}).catch(function(error) {
+            console.log('[Report Controller] removeReportOverlay message error:', error.message);
+        });
     };
 
 

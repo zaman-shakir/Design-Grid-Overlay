@@ -92,7 +92,10 @@ var popup = (function () {
             //Initialize state
             popup.init();
 
-            chrome.tabs.executeScript(currentChromeTabId, {file: 'src/executedScripts/gridStatus.js'});
+            chrome.scripting.executeScript({
+                target: {tabId: currentChromeTabId},
+                files: ['src/executedScripts/gridStatus.js']
+            });
 
             //tabController.getCurrentTabState(tabs[0].id);
         });
@@ -111,7 +114,7 @@ var popup = (function () {
                     case 'toggle-lines':
                       toggle_lines_html = element.shortcut;
                       break;
-                    case '_execute_browser_action':
+                    case '_execute_action':
                       activate_html = element.shortcut;
                       break;
                     }
@@ -330,8 +333,7 @@ var popup = (function () {
          * Heartbeat pattern to determine whether content script is already inject
          * If not it will be injected.
          */
-        chrome.tabs.sendMessage(currentChromeTabId, {greeting: "hello"}, function (response) {
-
+        chrome.tabs.sendMessage(currentChromeTabId, {greeting: "hello"}).then(function (response) {
             if (response) {
                 console.log("Design Grid Overlay JS already injected.");
 
@@ -342,20 +344,29 @@ var popup = (function () {
                         settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
                 });
             }
-            else {
-                console.log("Design Grid Overlay JS not already injected, injecting now.");
-                chrome.tabs.executeScript(currentChromeTabId, {file: "src/executedScripts/grid.js"});
-                chrome.tabs.executeScript(currentChromeTabId, {file: "src/executedScripts/calcReport.js"}, function () {
+        }).catch(function(error) {
+            // Content script not injected yet
+            console.log("Design Grid Overlay JS not already injected, injecting now.");
+            console.log('[Init] Error:', error.message);
 
-
-                    // Load all stored settings from chrome local storage, and then update the report overlay
-                    settingStorageController.loadSettings(currentChromeTabId, function (settings) {
-                        reportController.calculateReport(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
-                        reportController.updateReportOverlay(currentChromeTabId, gridToggle.checked,
-                            settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
-                    });
+            chrome.scripting.executeScript({
+                target: {tabId: currentChromeTabId},
+                files: ["src/executedScripts/grid.js"]
+            }).then(() => {
+                return chrome.scripting.executeScript({
+                    target: {tabId: currentChromeTabId},
+                    files: ["src/executedScripts/calcReport.js"]
                 });
-            }
+            }).then(() => {
+                // Load all stored settings from chrome local storage, and then update the report overlay
+                settingStorageController.loadSettings(currentChromeTabId, function (settings) {
+                    reportController.calculateReport(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                    reportController.updateReportOverlay(currentChromeTabId, gridToggle.checked,
+                        settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
+                });
+            }).catch(function(injectError) {
+                console.error('[Init] Failed to inject scripts:', injectError);
+            });
         });
 
         //Grid form event binding
@@ -397,6 +408,258 @@ var popup = (function () {
                         settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
                 }
             }, 1000));
+        }
+
+        /**
+         * Helper function to convert hex to rgba
+         */
+        function hexToRgba(hex, opacity) {
+            var r = parseInt(hex.slice(1, 3), 16);
+            var g = parseInt(hex.slice(3, 5), 16);
+            var b = parseInt(hex.slice(5, 7), 16);
+            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (opacity / 100) + ')';
+        }
+
+        /**
+         * Helper function to extract rgb values from rgba string
+         */
+        function rgbaToHex(rgba) {
+            var parts = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (parts) {
+                var r = parseInt(parts[1]).toString(16).padStart(2, '0');
+                var g = parseInt(parts[2]).toString(16).padStart(2, '0');
+                var b = parseInt(parts[3]).toString(16).padStart(2, '0');
+                return '#' + r + g + b;
+            }
+            return '#000000';
+        }
+
+        /**
+         * Grid Opacity Slider - Update the display value and apply opacity
+         */
+        var gridOpacitySlider = document.getElementById('gridOpacity');
+        var gridOpacityValue = document.getElementById('gridOpacityValue');
+
+        if (gridOpacitySlider && gridOpacityValue) {
+            console.log('[Grid Opacity] Slider initialized with value:', gridOpacitySlider.value);
+
+            // Set initial display value
+            gridOpacityValue.textContent = gridOpacitySlider.value + '%';
+
+            // Update display on input (real-time)
+            gridOpacitySlider.addEventListener('input', function() {
+                console.log('[Grid Opacity] Slider moved to:', this.value + '%');
+                gridOpacityValue.textContent = this.value + '%';
+            });
+
+            // Update grid when slider changes (after release)
+            gridOpacitySlider.addEventListener('change', function() {
+                console.log('[Grid Opacity] Change event fired, new value:', this.value);
+                var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                console.log('[Grid Opacity] Settings saved, opacity value:', settings.formData.advancedForm.settings.gridOpacity);
+                gridController.updateGrid(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                reportController.calculateReport(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                console.log('[Grid Opacity] Grid updated with new opacity');
+            });
+        } else {
+            console.error('[Grid Opacity] Slider or value display element not found!');
+        }
+
+        /**
+         * Color Pickers - Sync with text inputs and update grid
+         */
+        // Column Color Picker
+        var colorPicker = document.getElementById('colorPicker');
+        var colorInput = document.getElementById('color');
+
+        if (colorPicker && colorInput) {
+            console.log('[Color Picker] Column color picker initialized');
+
+            // Initialize picker from current rgba value
+            colorPicker.value = rgbaToHex(colorInput.value);
+
+            colorPicker.addEventListener('input', function() {
+                var opacity = gridOpacitySlider ? gridOpacitySlider.value : 20;
+                var rgbaColor = hexToRgba(this.value, opacity);
+                colorInput.value = rgbaColor;
+                console.log('[Color Picker] Column color changed to:', rgbaColor);
+            });
+
+            colorPicker.addEventListener('change', function() {
+                var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                gridController.updateGrid(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                console.log('[Color Picker] Grid updated with new column color');
+            });
+        }
+
+        // Horizontal Lines Color Picker
+        var horizontalColorPicker = document.getElementById('horizontalLinesColorPicker');
+        var horizontalColorInput = document.getElementById('horizontalLinesColor');
+
+        if (horizontalColorPicker && horizontalColorInput) {
+            console.log('[Color Picker] Horizontal lines color picker initialized');
+
+            // Initialize picker from current rgba value
+            horizontalColorPicker.value = rgbaToHex(horizontalColorInput.value);
+
+            horizontalColorPicker.addEventListener('input', function() {
+                var opacity = gridOpacitySlider ? gridOpacitySlider.value : 20;
+                var rgbaColor = hexToRgba(this.value, opacity);
+                horizontalColorInput.value = rgbaColor;
+                console.log('[Color Picker] Horizontal color changed to:', rgbaColor);
+            });
+
+            horizontalColorPicker.addEventListener('change', function() {
+                var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                gridController.updateGrid(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                console.log('[Color Picker] Grid updated with new horizontal color');
+            });
+        }
+
+        // Label Color Picker
+        var labelColorPicker = document.getElementById('overlayLabelColorPicker');
+        var labelColorInput = document.getElementById('overlayLabelColor');
+
+        if (labelColorPicker && labelColorInput) {
+            console.log('[Color Picker] Label color picker initialized');
+
+            labelColorPicker.addEventListener('input', function() {
+                labelColorInput.value = this.value;
+                console.log('[Color Picker] Label color changed to:', this.value);
+            });
+
+            labelColorPicker.addEventListener('change', function() {
+                var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                reportController.updateReportOverlay(currentChromeTabId, gridToggle.checked,
+                    settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
+                console.log('[Color Picker] Report overlay updated with new label color');
+            });
+        }
+
+        // Text Color Picker
+        var textColorPicker = document.getElementById('overlayTextColorPicker');
+        var textColorInput = document.getElementById('overlayTextColor');
+
+        if (textColorPicker && textColorInput) {
+            console.log('[Color Picker] Text color picker initialized');
+
+            textColorPicker.addEventListener('input', function() {
+                textColorInput.value = this.value;
+                console.log('[Color Picker] Text color changed to:', this.value);
+            });
+
+            textColorPicker.addEventListener('change', function() {
+                var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                reportController.updateReportOverlay(currentChromeTabId, gridToggle.checked,
+                    settings.formData.reportForm.settings, settings.formData.advancedForm.settings);
+                console.log('[Color Picker] Report overlay updated with new text color');
+            });
+        }
+
+        /**
+         * Grid Presets - Apply preset configurations
+         */
+        var gridPresetsDropdown = document.getElementById('gridPresets');
+
+        if (gridPresetsDropdown) {
+            console.log('[Grid Presets] Dropdown initialized');
+
+            gridPresetsDropdown.addEventListener('change', function() {
+                var preset = this.value;
+                console.log('[Grid Presets] Preset selected:', preset);
+
+                if (preset === '') {
+                    console.log('[Grid Presets] Empty selection, ignoring');
+                    return; // No preset selected
+                }
+
+                var presets = {
+                    'bootstrap': {
+                        largeColumns: 12,
+                        smallColumns: 12,
+                        gutters: 30,
+                        outterGutters: 30,
+                        mobileInnerGutters: 15,
+                        mobileOutterGutters: 15,
+                        largeWidth: 1170,
+                        smallWidth: 768
+                    },
+                    'material': {
+                        largeColumns: 12,
+                        smallColumns: 4,
+                        gutters: 16,
+                        outterGutters: 16,
+                        mobileInnerGutters: 16,
+                        mobileOutterGutters: 16,
+                        largeWidth: 1280,
+                        smallWidth: 600
+                    },
+                    'foundation': {
+                        largeColumns: 12,
+                        smallColumns: 12,
+                        gutters: 20,
+                        outterGutters: 20,
+                        mobileInnerGutters: 20,
+                        mobileOutterGutters: 20,
+                        largeWidth: 1200,
+                        smallWidth: 640
+                    },
+                    'tailwind': {
+                        largeColumns: 12,
+                        smallColumns: 12,
+                        gutters: 16,
+                        outterGutters: 16,
+                        mobileInnerGutters: 8,
+                        mobileOutterGutters: 8,
+                        largeWidth: 1280,
+                        smallWidth: 640
+                    },
+                    '960gs': {
+                        largeColumns: 12,
+                        smallColumns: 12,
+                        gutters: 20,
+                        outterGutters: 10,
+                        mobileInnerGutters: 10,
+                        mobileOutterGutters: 10,
+                        largeWidth: 960,
+                        smallWidth: 768
+                    }
+                };
+
+                var selectedPreset = presets[preset];
+
+                if (selectedPreset) {
+                    console.log('[Grid Presets] Applying preset configuration:', selectedPreset);
+
+                    // Apply preset values to form inputs
+                    document.getElementById('largeColumns').value = selectedPreset.largeColumns;
+                    document.getElementById('smallColumns').value = selectedPreset.smallColumns;
+                    document.getElementById('gutters').value = selectedPreset.gutters;
+                    document.getElementById('outterGutters').value = selectedPreset.outterGutters;
+                    document.getElementById('mobileInnerGutters').value = selectedPreset.mobileInnerGutters;
+                    document.getElementById('mobileOutterGutters').value = selectedPreset.mobileOutterGutters;
+                    document.getElementById('largeWidth').value = selectedPreset.largeWidth;
+                    document.getElementById('smallWidth').value = selectedPreset.smallWidth;
+
+                    console.log('[Grid Presets] Form values updated');
+
+                    // Save settings and update grid
+                    var settings = settingStorageController.saveSettings(currentChromeTabId, true);
+                    console.log('[Grid Presets] Settings saved to storage');
+
+                    gridController.updateGrid(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                    reportController.calculateReport(currentChromeTabId, settings.formData.gridForm.settings, settings.formData.advancedForm.settings);
+                    console.log('[Grid Presets] Grid and report updated');
+
+                    // Reset dropdown
+                    this.value = '';
+                    console.log('[Grid Presets] Dropdown reset');
+                } else {
+                    console.error('[Grid Presets] Preset not found:', preset);
+                }
+            });
+        } else {
+            console.error('[Grid Presets] Dropdown element not found!');
         }
 
     };
